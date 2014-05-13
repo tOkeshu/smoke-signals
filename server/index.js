@@ -24,6 +24,16 @@ app.get("/", function(req, res) {
   res.json(200, credentials);
 });
 
+/**
+ * Create a rooms as a point of rendez-vous for users.
+ **/
+app.post("/rooms", function(req, res) {
+  var room = req.param('room') || crypto.randomBytes(16).toString('hex');
+  // XXX: what if the room already exists?
+  rooms[room] = [];
+  res.json(200, {room: room});
+});
+
 app.listen(7665);
 console.log('Listening on port 7665');
 
