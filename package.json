@@ -9,5 +9,11 @@
   "dependencies": {
     "express": "4.2.x",
     "body-parser": "1.2.x"
+  },
+  "devDependencies": {
+    "chai": "1.5.x",
+    "mocha": "1.8.x",
+    "request": "2.33.x",
+    "sinon": "1.9.x"
   }
 }
