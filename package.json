@@ -15,5 +15,9 @@
     "mocha": "1.8.x",
     "request": "2.33.x",
     "sinon": "1.9.x"
+  },
+  "scripts": {
+    "start": "./bin/smoke",
+    "test": "./node_modules/.bin/mocha test"
   }
 }
