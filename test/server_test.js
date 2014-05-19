@@ -168,7 +168,7 @@ describe("Server", function() {
       function(done) {
         var uid = "fake uid", request;
         sandbox.stub(server, "_UID").returns(uid);
-        request = req.get('/rooms/foo');
+        var request = req.get('/rooms/foo');
 
         request.on("response", function(response) {
           var conn = server.rooms["foo"][uid];
@@ -199,19 +199,58 @@ describe("Server", function() {
 
           expect(message.peer).to.equal("user 3");
 
-          if (nbCalls === 2)
+          if (nbCalls === 2) {
+            user1.close();
+            user2.close();
             done();
+          }
         };
 
         user1.addEventListener("buddyleft", buddyleft);
         user2.addEventListener("buddyleft", buddyleft);
-        request = req.get('/rooms/foo');
+        var request = req.get('/rooms/foo');
         request.on("response", function(response) {
           response.socket.end();
         });
       });
 
     it.skip("should send pings every 20 seconds to keep the connection alive");
+  });
+
+  describe("#forwardEvent", function() {
+
+    beforeEach(function() {
+      server.rooms["foo"] = {};
+    });
+
+    it("should forward the posted event to all connected users",
+      function(done) {
+        var uid = sandbox.stub(server, "_UID");
+        uid.onCall(0).returns("user 1");
+        uid.onCall(1).returns("user 2");
+
+        var user1 = new EventSource(host + "/rooms/foo");
+        var user2 = new EventSource(host + "/rooms/foo");
+
+        user1.addEventListener("bar", function(event) {
+          var message = JSON.parse(event.data);
+
+          expect(message.peer).to.equal("user 2");
+
+          user1.close();
+          user2.close();
+          done();
+        });
+
+        req.post({
+          url: '/rooms/foo',
+          qs: {type: "bar"},
+          body: JSON.stringify({peer: "user 1"}),
+          headers: {"X-SMOKE-UID": "user 2"}
+        });
+
+      });
+
   });
 
 });

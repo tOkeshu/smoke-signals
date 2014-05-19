@@ -20,6 +20,7 @@ function SmokeServer(config) {
   this.app.get("/",             this.hello.bind(this));
   this.app.post("/rooms",       this.createRoom.bind(this));
   this.app.get("/rooms/:room",  this.eventStream.bind(this));
+  this.app.post("/rooms/:room", this.forwardEvent.bind(this));
 
   this.server = http.createServer(this.app);
 };
@@ -90,6 +91,21 @@ SmokeServer.prototype = {
     };
 
     users[uid] = res;
+  },
+
+  forwardEvent: function(req, res) {
+    var from  = req.get('X-SMOKE-UID');
+    var room  = req.param('room');
+    var users = this.rooms[room];
+    var event = req.body;
+    var type  = req.param('type');
+
+    var user = users[event.peer];
+    event.peer = from;
+    user.write("event: " + type + "\n");
+    user.write("data: " + JSON.stringify(event) + "\n\n");
+
+    res.send(200, "ok");
   },
 
   run: function(callback) {
