@@ -14,7 +14,8 @@
     "chai": "1.5.x",
     "mocha": "1.8.x",
     "request": "2.33.x",
-    "sinon": "1.9.x"
+    "sinon": "1.9.x",
+    "eventsource": "0.1.x"
   },
   "scripts": {
     "start": "./bin/smoke",

@@ -19,6 +19,7 @@ function SmokeServer(config) {
   this.app.use(bodyParser.json());
   this.app.get("/",             this.hello.bind(this));
   this.app.post("/rooms",       this.createRoom.bind(this));
+  this.app.get("/rooms/:room",  this.eventStream.bind(this));
 
   this.server = http.createServer(this.app);
 };
@@ -42,10 +43,53 @@ SmokeServer.prototype = {
    * Create a rooms as a point of rendez-vous for users.
    **/
   createRoom: function(req, res) {
-    var room = req.param('room') || crypto.randomBytes(16).toString('hex');
+    var room = req.param('room') || this._UID();
     // XXX: what if the room already exists?
-    this.rooms[room] = [];
+    this.rooms[room] = {};
     res.json(200, {room: room});
+  },
+
+  eventStream: function(req, res) {
+    var room = req.param('room');
+    var users = this.rooms[room];
+    var uid = this._UID();
+    var timer, event;
+
+    res.writeHead(200, {
+      "Content-Type":  "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection":    "keep-alive"
+    });
+
+    req.on("close", function() {
+      var users = this.rooms[room];
+      delete users[uid];
+      clearInterval(timer);
+
+      var event = JSON.stringify({peer: uid});
+      for (var user in users) {
+        users[user].write("event: buddyleft\n");
+        users[user].write("data: " + event + "\n\n");
+      };
+    }.bind(this));
+
+    res.write(':\n'); // send a dummy comment to ensure that the head is flushed
+    event = JSON.stringify({uid: uid});
+    res.write("event: uid\ndata: " + event + "\n\n");
+
+    // we send a ping comment every n seconds to keep the connection
+    // alive.
+    timer = setInterval(function() {
+      res.write(":p\n\n");
+    }, 20000);
+
+    event = JSON.stringify({type: 'newbuddy', peer: uid})
+    for (var user in users) {
+      users[user].write("event: newbuddy\n");
+      users[user].write("data: " + event + "\n\n");
+    };
+
+    users[uid] = res;
   },
 
   run: function(callback) {
@@ -54,6 +98,10 @@ SmokeServer.prototype = {
 
   stop: function(callback) {
     this.server.close(callback);
+  },
+
+  _UID: function() {
+    return crypto.randomBytes(16).toString("hex");
   }
 };
 
