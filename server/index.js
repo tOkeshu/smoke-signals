@@ -7,7 +7,7 @@ var crypto  = require('crypto');
 var http = require('http');
 
 var express = require('express');
-var bodyParser = require('body-parser')
+var bodyParser = require('body-parser');
 
 var pjson = require('../package.json');
 
@@ -23,7 +23,7 @@ function SmokeServer(config) {
   this.app.post("/rooms/:room", this.forwardEvent.bind(this));
 
   this.server = http.createServer(this.app);
-};
+}
 
 SmokeServer.prototype = {
   /**
@@ -41,7 +41,7 @@ SmokeServer.prototype = {
   },
 
   /**
-   * Create a rooms as a point of rendez-vous for users.
+   * Create a room as a point of rendez-vous for users.
    **/
   createRoom: function(req, res) {
     var room = req.param('room') || this._UID();
@@ -84,11 +84,11 @@ SmokeServer.prototype = {
       res.write(":p\n\n");
     }, 20000);
 
-    event = JSON.stringify({type: 'newbuddy', peer: uid})
+    event = JSON.stringify({type: 'newbuddy', peer: uid});
     for (var user in users) {
       users[user].write("event: newbuddy\n");
       users[user].write("data: " + event + "\n\n");
-    };
+    }
 
     users[uid] = res;
   },
