@@ -82,15 +82,13 @@ SmokeServer.prototype = {
   },
 
   forwardEvent: function(req, res) {
-    var from  = req.get('X-SMOKE-UID');
     var room  = req.param('room');
     var users = this.rooms[room];
     var event = req.body;
-    var type  = req.param('type');
 
-    var user = users[event.peer];
-    event.peer = from;
-    user.sse(type, event);
+    var user = users[event.to];
+    event.payload.from = event.from;
+    user.sse(event.type, event.payload);
 
     res.send(200, "ok");
   },

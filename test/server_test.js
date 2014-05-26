@@ -235,7 +235,8 @@ describe("Server", function() {
         user1.addEventListener("bar", function(event) {
           var message = JSON.parse(event.data);
 
-          expect(message.peer).to.equal("user 2");
+          expect(message.from).to.equal("user 2");
+          expect(message.some).to.equal("data");
 
           user1.close();
           user2.close();
@@ -244,9 +245,14 @@ describe("Server", function() {
 
         req.post({
           url: '/rooms/foo',
-          qs: {type: "bar"},
-          body: JSON.stringify({peer: "user 1"}),
-          headers: {"X-SMOKE-UID": "user 2"}
+          body: JSON.stringify({
+            type: "bar",
+            from: "user 2",
+            to:   "user 1",
+            payload: {
+              some: "data"
+            }
+          }),
         });
 
       });

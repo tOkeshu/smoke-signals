@@ -36,10 +36,14 @@ Listen for events in a room:
 
 Send an event to someone (here it sends an event `bar` to user `xoo`:
 
-    $ curl -X POST http://localhost:7665/rooms/3d56a9d9b2b8709fa5874d2907542e4a?type=bar --header "Content-Type: application/json" --header "X-SMOKE-UID: bf1a3a352ff95302bf2ca81504c141f7" --data '
+    $ curl -X POST http://localhost:7665/rooms/3d56a9d9b2b8709fa5874d2907542e4a --header "Content-Type: application/json" " --data '
     {
-      "peer": "xoo",
-      "arbitrary": "data"
+      "type": "bar",
+      "from": "bf1a3a352ff95302bf2ca81504c141f7",
+      "to": "3d56a9d9b2b8709fa5874d2907542e4a",
+      "payload": {
+        "arbitrary": "data"
+      }
     }'
 
 License
