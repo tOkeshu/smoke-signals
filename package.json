@@ -15,10 +15,11 @@
     "mocha": "1.8.x",
     "request": "2.33.x",
     "sinon": "1.9.x",
-    "eventsource": "0.1.x"
+    "eventsource": "0.1.x",
+    "jshint": "2.5.x"
   },
   "scripts": {
     "start": "./bin/smoke",
-    "test": "./node_modules/.bin/mocha test"
+    "test": "./node_modules/.bin/jshint server/*.js && ./node_modules/.bin/mocha test"
   }
 }
