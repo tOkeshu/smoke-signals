@@ -10,6 +10,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 
 var pjson = require('../package.json');
+var serverSentEvents = require('./sse');
 
 function SmokeServer(config) {
   this.config = config;
@@ -17,6 +18,7 @@ function SmokeServer(config) {
 
   this.app = express();
   this.app.use(bodyParser.json());
+  this.app.use(serverSentEvents);
   this.app.get("/",             this.hello.bind(this));
   this.app.post("/rooms",       this.createRoom.bind(this));
   this.app.get("/rooms/:room",  this.eventStream.bind(this));
@@ -54,41 +56,27 @@ SmokeServer.prototype = {
     var room = req.param('room');
     var users = this.rooms[room];
     var uid = this._UID();
-    var timer, event;
-
-    res.writeHead(200, {
-      "Content-Type":  "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection":    "keep-alive"
-    });
+    var timer;
 
     req.on("close", function() {
       var users = this.rooms[room];
       delete users[uid];
       clearInterval(timer);
 
-      var event = JSON.stringify({peer: uid});
-      for (var user in users) {
-        users[user].write("event: buddyleft\n");
-        users[user].write("data: " + event + "\n\n");
-      };
+      for (var user in users)
+        users[user].sse("buddyleft", {peer: uid});
     }.bind(this));
 
-    res.write(':\n'); // send a dummy comment to ensure that the head is flushed
-    event = JSON.stringify({uid: uid});
-    res.write("event: uid\ndata: " + event + "\n\n");
+    res.sse("uid", {uid: uid});
 
     // we send a ping comment every n seconds to keep the connection
     // alive.
     timer = setInterval(function() {
-      res.write(":p\n\n");
+      res.ssePing();
     }, 20000);
 
-    event = JSON.stringify({type: 'newbuddy', peer: uid});
-    for (var user in users) {
-      users[user].write("event: newbuddy\n");
-      users[user].write("data: " + event + "\n\n");
-    }
+    for (var user in users)
+      users[user].sse("newbuddy", {peer: uid});
 
     users[uid] = res;
   },
@@ -102,8 +90,7 @@ SmokeServer.prototype = {
 
     var user = users[event.peer];
     event.peer = from;
-    user.write("event: " + type + "\n");
-    user.write("data: " + JSON.stringify(event) + "\n\n");
+    user.sse(type, event);
 
     res.send(200, "ok");
   },
