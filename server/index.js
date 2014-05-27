@@ -63,7 +63,12 @@ SmokeServer.prototype = {
    **/
   createRoom: function(req, res) {
     var room = req.param('room') || this._UID();
-    // XXX: what if the room already exists?
+
+    if (this.rooms[room]) {
+      res.json(409, "");
+      return;
+    }
+
     this.rooms[room] = {};
     res.json(200, {room: room});
   },

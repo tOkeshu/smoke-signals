@@ -120,6 +120,17 @@ describe("Server", function() {
         });
       });
 
+    it("should return a conflict error if the room exists", function(done) {
+      var params = JSON.stringify({room: "foo"});
+      var reqOptions = {url: '/rooms', body: params};
+      server.rooms["foo"] = {};
+
+      req.post(reqOptions, function (error, response, body) {
+        expect(response.statusCode).to.equal(409);
+        done();
+      });
+    });
+
   });
 
   describe("#eventStream", function() {
