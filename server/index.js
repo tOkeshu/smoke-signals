@@ -117,6 +117,14 @@ SmokeServer.prototype = {
       res.json(404, "");
       return;
     }
+    if (!event.from) {
+      res.json(400, "");
+      return;
+    }
+    if ((typeof event.payload) !== "object") {
+      res.json(400, "");
+      return;
+    }
 
     var user = users[event.to];
     event.payload.from = event.from;

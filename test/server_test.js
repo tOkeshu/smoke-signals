@@ -329,6 +329,35 @@ describe("Server", function() {
         });
     });
 
+    it("should return an error if from is not privided", function(done) {
+      req.post({
+        url: '/rooms/foo',
+        body: JSON.stringify({
+          type: "bar",
+          to:   "user 1",
+          payload: {
+            some: "data"
+          }
+        })}, function(error, response, body) {
+          expect(response.statusCode).to.equal(400);
+          done();
+        });
+    });
+
+    it("should return an error if payload is not an object", function(done) {
+      req.post({
+        url: '/rooms/foo',
+        body: JSON.stringify({
+          type: "bar",
+          from: "user 2",
+          to:   "user 1",
+          payload: "xoo"
+        })}, function(error, response, body) {
+          expect(response.statusCode).to.equal(400);
+          done();
+        });
+    });
+
 
   });
 
