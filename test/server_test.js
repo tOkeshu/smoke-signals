@@ -29,7 +29,10 @@ var req = {
 
     params.url = host + params.url;
     params.headers = params.headers || {};
-    params.headers['Content-Type'] = "application/json";
+
+    if (!params.headers['Content-Type'])
+      params.headers['Content-Type'] = "application/json";
+
     request.post(params, callback);
   }
 };
@@ -102,6 +105,21 @@ describe("Server", function() {
         done();
       });
     });
+
+    it("should return an error if the content type is not JSON",
+      function(done) {
+        req.post({
+          url: '/rooms',
+          headers: {'Content-Type': "text/plain"},
+          body: JSON.stringify({room: "foo"}),
+        }, function(error, response, body) {
+          body = JSON.parse(body);
+          expect(response.statusCode).to.equal(400);
+          expect(body).to.deep.equal(['application/json']);
+          done();
+        });
+      });
+
   });
 
   describe("#eventStream", function() {
@@ -255,6 +273,26 @@ describe("Server", function() {
           }),
         });
 
+      });
+
+    it("should return an error if the content type is not JSON",
+      function(done) {
+        req.post({
+          url: '/rooms/foo',
+          headers: {'Content-Type': "text/plain"},
+          body: JSON.stringify({
+            type: "bar",
+            from: "user 2",
+            to:   "user 1",
+            payload: {
+              some: "data"
+            }
+          })}, function(error, response, body) {
+            body = JSON.parse(body);
+            expect(response.statusCode).to.equal(400);
+            expect(body).to.deep.equal(['application/json']);
+            done();
+          });
       });
 
   });

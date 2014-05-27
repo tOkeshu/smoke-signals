@@ -12,12 +12,28 @@ var bodyParser = require('body-parser');
 var pjson = require('../package.json');
 var serverSentEvents = require('./sse');
 
+function requireJSON(req, res, next) {
+  if (req.method !== "POST") {
+    next();
+    return;
+  }
+
+  if (req.get("Content-Type") !== "application/json") {
+    res.json(400, ['application/json']);
+    return;
+  }
+
+  next();
+}
+
+
 function SmokeServer(config) {
   this.config = config;
   this.rooms = {};
 
   this.app = express();
   this.app.use(bodyParser.json());
+  this.app.use(requireJSON);
   this.app.use(serverSentEvents);
   this.app.get("/",             this.hello.bind(this));
   this.app.post("/rooms",       this.createRoom.bind(this));

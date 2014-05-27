@@ -18,7 +18,7 @@ Infos:
 
 Create a room:
 
-    $ curl -X POST http://localhost:7665/rooms
+    $ curl -X POST http://localhost:7665/rooms --header "Content-Type: application/json"
     {"room": "3d56a9d9b2b8709fa5874d2907542e4a"}
 
     $ curl -X POST http://localhost:7665/rooms --header "Content-Type: application/json" --data '{"room": "foo"}'
