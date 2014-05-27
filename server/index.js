@@ -71,8 +71,14 @@ SmokeServer.prototype = {
   eventStream: function(req, res) {
     var room = req.param('room');
     var users = this.rooms[room];
-    var uid = this._UID();
-    var timer;
+    var uid, timer;
+
+    if (users === undefined) {
+      res.json(404, "");
+      return;
+    }
+
+    uid = this._UID();
 
     req.on("close", function() {
       var users = this.rooms[room];
@@ -101,6 +107,11 @@ SmokeServer.prototype = {
     var room  = req.param('room');
     var users = this.rooms[room];
     var event = req.body;
+
+    if (users === undefined) {
+      res.json(404, "");
+      return;
+    }
 
     var user = users[event.to];
     event.payload.from = event.from;

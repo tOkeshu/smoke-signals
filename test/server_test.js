@@ -233,6 +233,13 @@ describe("Server", function() {
       });
 
     it.skip("should send pings every 20 seconds to keep the connection alive");
+
+    it("should return a 404 if the room does not exist", function(done) {
+      req.get('/rooms/bar', function(error, response, body) {
+        expect(response.statusCode).to.equal(404);
+        done();
+      });
+    });
   });
 
   describe("#forwardEvent", function() {
@@ -294,6 +301,23 @@ describe("Server", function() {
             done();
           });
       });
+
+    it("should return a 404 if the room does not exist", function(done) {
+      req.post({
+        url: '/rooms/bar',
+        body: JSON.stringify({
+          type: "bar",
+          from: "user 2",
+          to:   "user 1",
+          payload: {
+            some: "data"
+          }
+        })}, function(error, response, body) {
+          expect(response.statusCode).to.equal(404);
+          done();
+        });
+    });
+
 
   });
 
