@@ -298,7 +298,7 @@ describe("Server", function() {
         user1.addEventListener("bar", function(event) {
           var message = JSON.parse(event.data);
 
-          expect(message.from).to.equal("user 2");
+          expect(message.peer).to.equal("user 2");
           expect(message.some).to.equal("data");
 
           user1.close();
@@ -311,7 +311,7 @@ describe("Server", function() {
           body: JSON.stringify({
             type: "bar",
             token: "token 2",
-            to:   "user 1",
+            peer:   "user 1",
             payload: {
               some: "data"
             }
@@ -330,7 +330,7 @@ describe("Server", function() {
           body: JSON.stringify({
             type: "bar",
             token: "token 2",
-            to:   "user 1",
+            peer:   "user 1",
             payload: {
               some: "data"
             }
@@ -348,7 +348,7 @@ describe("Server", function() {
         body: JSON.stringify({
           type: "bar",
           token: "token 2",
-          to:   "user 1",
+          peer:   "user 1",
           payload: {
             some: "data"
           }
@@ -363,7 +363,7 @@ describe("Server", function() {
         url: '/rooms/foo',
         body: JSON.stringify({
           type: "bar",
-          to:   "user 1",
+          peer:   "user 1",
           payload: {
             some: "data"
           }
@@ -379,7 +379,7 @@ describe("Server", function() {
         body: JSON.stringify({
           type: "bar",
           token: "token 2",
-          to:   "user 1",
+          peer:   "user 1",
           payload: "xoo"
         })}, function(error, response, body) {
           expect(response.statusCode).to.equal(400);

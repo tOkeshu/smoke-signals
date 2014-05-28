@@ -131,8 +131,8 @@ SmokeServer.prototype = {
       return;
     }
 
-    var user = users[event.to];
-    event.payload.from = from;
+    var user = users[event.peer];
+    event.payload.peer = from;
     user.sse(event.type, event.payload);
 
     res.send(200, "ok");
