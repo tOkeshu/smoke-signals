@@ -30,6 +30,7 @@ function requireJSON(req, res, next) {
 function SmokeServer(config) {
   this.config = config;
   this.rooms = {};
+  this.tokens = {};
 
   this.app = express();
   this.app.use(bodyParser.json());
@@ -62,7 +63,7 @@ SmokeServer.prototype = {
    * Create a room as a point of rendez-vous for users.
    **/
   createRoom: function(req, res) {
-    var room = req.param('room') || this._UID();
+    var room = req.param('room') || this._generateID();
 
     if (this.rooms[room]) {
       res.json(409, "");
@@ -76,25 +77,27 @@ SmokeServer.prototype = {
   eventStream: function(req, res) {
     var room = req.param('room');
     var users = this.rooms[room];
-    var uid, timer;
+    var uid, token, timer;
 
     if (users === undefined) {
       res.json(404, "");
       return;
     }
 
-    uid = this._UID();
+    uid = this._generateID();
+    token = this._generateID();
 
     req.on("close", function() {
       var users = this.rooms[room];
       delete users[uid];
+      delete this.tokens[token];
       clearInterval(timer);
 
       for (var user in users)
         users[user].sse("buddyleft", {peer: uid});
     }.bind(this));
 
-    res.sse("uid", {uid: uid});
+    res.sse("uid", {uid: uid, token: token});
 
     // we send a ping comment every n seconds to keep the connection
     // alive.
@@ -106,18 +109,20 @@ SmokeServer.prototype = {
       users[user].sse("newbuddy", {peer: uid});
 
     users[uid] = res;
+    this.tokens[token] = uid;
   },
 
   forwardEvent: function(req, res) {
     var room  = req.param('room');
     var users = this.rooms[room];
     var event = req.body;
+    var from  = this.tokens[event.token];
 
     if (users === undefined) {
       res.json(404, "");
       return;
     }
-    if (!event.from) {
+    if (!from) {
       res.json(400, "");
       return;
     }
@@ -127,7 +132,7 @@ SmokeServer.prototype = {
     }
 
     var user = users[event.to];
-    event.payload.from = event.from;
+    event.payload.from = from;
     user.sse(event.type, event.payload);
 
     res.send(200, "ok");
@@ -141,7 +146,7 @@ SmokeServer.prototype = {
     this.server.close(callback);
   },
 
-  _UID: function() {
+  _generateID: function() {
     return crypto.randomBytes(16).toString("hex");
   }
 };

@@ -78,7 +78,7 @@ describe("Server", function() {
 
   describe("#createRoom", function() {
     it("should create a new room", function(done) {
-      sandbox.stub(server, "_UID").returns("fake room");
+      sandbox.stub(server, "_generateID").returns("fake room");
 
       req.post('/rooms', function (error, response, body) {
         expect(error).to.equal(null);
@@ -139,14 +139,18 @@ describe("Server", function() {
       server.rooms["foo"] = {};
     });
 
-    it("should receive an uid as the first event",
+    it("should receive an uid-token pair as the first event",
       function(done) {
+        var id = sandbox.stub(server, "_generateID");
+        id.onCall(0).returns("fake uid");
+        id.onCall(1).returns("fake token");
         var source = new EventSource(host + "/rooms/foo");
 
         source.addEventListener("uid", function(event) {
           var message = JSON.parse(event.data);
 
-          expect(message.uid).to.be.a("string");
+          expect(message.uid).to.equal("fake uid");
+          expect(message.token).to.equal("fake token");
 
           source.close();
           done();
@@ -168,15 +172,34 @@ describe("Server", function() {
 
     it("should notify everyone in the room a new user is here",
       function(done) {
+        var id = sandbox.stub(server, "_generateID");
+        id.onCall(0).returns("user 1");
+        id.onCall(1).returns("token 1");
+        id.onCall(2).returns("user 2");
+        id.onCall(3).returns("token 2");
+        id.onCall(4).returns("user 3");
+        id.onCall(5).returns("token 3");
         var user1 = new EventSource(host + "/rooms/foo");
         var user2 = new EventSource(host + "/rooms/foo");
-        var user3, nbCalls = 0, uid = "fake uid";
+        var user3, nbCalls = 0, id;
+
+        function uid(event) {
+          nbCalls += 1;
+
+          if (nbCalls < 2)
+            return;
+
+          nbCalls = 0;
+          user1.addEventListener("newbuddy", newbuddy);
+          user2.addEventListener("newbuddy", newbuddy);
+          user3 = new EventSource(host + "/rooms/foo");
+        }
 
         function newbuddy(event) {
           var message = JSON.parse(event.data);
           nbCalls += 1;
 
-          expect(message.peer).to.equal(uid);
+          expect(message.peer).to.equal("user 3");
 
           if (nbCalls === 2) {
             user1.close();
@@ -186,17 +209,16 @@ describe("Server", function() {
           }
         };
 
-        user1.addEventListener("newbuddy", newbuddy);
-        user2.addEventListener("newbuddy", newbuddy);
-
-        sandbox.stub(server, "_UID").returns(uid);
-        user3 = new EventSource(host + "/rooms/foo");
+        user1.addEventListener("uid", uid);
+        user2.addEventListener("uid", uid);
       });
 
     it("should remove the user from the room if he disconnects",
       function(done) {
-        var uid = "fake uid", request;
-        sandbox.stub(server, "_UID").returns(uid);
+        var uid = "fake uid"
+        var id = sandbox.stub(server, "_generateID");
+        id.onCall(0).returns(uid);
+        id.onCall(1).returns("fake token");
         var request = req.get('/rooms/foo');
 
         request.on("response", function(response) {
@@ -213,10 +235,13 @@ describe("Server", function() {
 
     it("should notify everyone that someone disconnected",
       function(done) {
-        var uid = sandbox.stub(server, "_UID");
-        uid.onCall(0).returns("user 1");
-        uid.onCall(1).returns("user 2");
-        uid.onCall(2).returns("user 3");
+        var id = sandbox.stub(server, "_generateID");
+        id.onCall(0).returns("user 1");
+        id.onCall(1).returns("token 1");
+        id.onCall(2).returns("user 2");
+        id.onCall(3).returns("token 2");
+        id.onCall(4).returns("user 3");
+        id.onCall(5).returns("token 3");
 
         var user1 = new EventSource(host + "/rooms/foo");
         var user2 = new EventSource(host + "/rooms/foo");
@@ -261,9 +286,11 @@ describe("Server", function() {
 
     it("should forward the posted event to all connected users",
       function(done) {
-        var uid = sandbox.stub(server, "_UID");
+        var uid = sandbox.stub(server, "_generateID");
         uid.onCall(0).returns("user 1");
-        uid.onCall(1).returns("user 2");
+        uid.onCall(1).returns("token 1");
+        uid.onCall(2).returns("user 2");
+        uid.onCall(3).returns("token 2");
 
         var user1 = new EventSource(host + "/rooms/foo");
         var user2 = new EventSource(host + "/rooms/foo");
@@ -283,12 +310,14 @@ describe("Server", function() {
           url: '/rooms/foo',
           body: JSON.stringify({
             type: "bar",
-            from: "user 2",
+            token: "token 2",
             to:   "user 1",
             payload: {
               some: "data"
             }
           }),
+        }, function(error, response, body) {
+          expect(response.statusCode).to.equal(200);
         });
 
       });
@@ -300,7 +329,7 @@ describe("Server", function() {
           headers: {'Content-Type': "text/plain"},
           body: JSON.stringify({
             type: "bar",
-            from: "user 2",
+            token: "token 2",
             to:   "user 1",
             payload: {
               some: "data"
@@ -318,7 +347,7 @@ describe("Server", function() {
         url: '/rooms/bar',
         body: JSON.stringify({
           type: "bar",
-          from: "user 2",
+          token: "token 2",
           to:   "user 1",
           payload: {
             some: "data"
@@ -349,7 +378,7 @@ describe("Server", function() {
         url: '/rooms/foo',
         body: JSON.stringify({
           type: "bar",
-          from: "user 2",
+          token: "token 2",
           to:   "user 1",
           payload: "xoo"
         })}, function(error, response, body) {
