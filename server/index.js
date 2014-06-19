@@ -64,37 +64,52 @@ SmokeServer.prototype = {
    **/
   createRoom: function(req, res) {
     var room = req.param('room') || this._generateID();
+    var ttl  = req.param('ttl') || 60;
+    ttl = ttl * 1000;
 
     if (this.rooms[room]) {
       res.json(409, "");
       return;
     }
 
-    this.rooms[room] = {};
+    var timeout = setTimeout(function() {
+      delete this.rooms[room];
+    }.bind(this), ttl);
+    this.rooms[room] = {users: {}, ttl: ttl, timeout: timeout};
+
     res.json(200, {room: room});
   },
 
   eventStream: function(req, res) {
     var room = req.param('room');
-    var users = this.rooms[room];
-    var uid, token, timer;
+    var users, uid, token, timer;
 
-    if (users === undefined) {
+    if (this.rooms[room] === undefined) {
       res.json(404, "");
       return;
     }
 
-    uid = this._generateID();
+    users = this.rooms[room].users;
+    uid   = this._generateID();
     token = this._generateID();
 
     req.on("close", function() {
-      var users = this.rooms[room];
+      var users = this.rooms[room].users;
       delete users[uid];
       delete this.tokens[token];
       clearInterval(timer);
 
-      for (var user in users)
+      var nbUsers = 0;
+      for (var user in users) {
         users[user].sse("buddyleft", {peer: uid});
+        nbUsers += 1;
+      }
+      if (nbUsers === 0) {
+        var timeout = setTimeout(function() {
+          delete this.rooms[room];
+        }.bind(this), this.rooms[room].ttl);
+        this.rooms[room].timeout = timeout;
+      }
     }.bind(this));
 
     res.sse("uid", {uid: uid, token: token});
@@ -107,6 +122,7 @@ SmokeServer.prototype = {
 
     for (var user in users)
       users[user].sse("newbuddy", {peer: uid});
+    clearTimeout(this.rooms[room].timeout);
 
     users[uid] = res;
     this.tokens[token] = uid;
@@ -114,11 +130,11 @@ SmokeServer.prototype = {
 
   forwardEvent: function(req, res) {
     var room  = req.param('room');
-    var users = this.rooms[room];
     var event = req.body;
     var from  = this.tokens[event.token];
+    var users, user;
 
-    if (users === undefined) {
+    if (this.rooms[room] === undefined) {
       res.json(404, "");
       return;
     }
@@ -131,7 +147,8 @@ SmokeServer.prototype = {
       return;
     }
 
-    var user = users[event.peer];
+    users = this.rooms[room].users;
+    user  = users[event.peer];
     event.payload.peer = from;
     user.sse(event.type, event.payload);
 

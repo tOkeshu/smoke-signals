@@ -38,7 +38,7 @@ var req = {
 };
 
 describe("Server", function() {
-  var server, sandbox;
+  var server, sandbox, clock;
 
   before(function(done) {
     server = new SmokeServer();
@@ -47,10 +47,12 @@ describe("Server", function() {
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
+    clock = sinon.useFakeTimers();
     server.rooms = {};
   });
 
   afterEach(function() {
+    clock.restore();
     sandbox.restore();
   });
 
@@ -106,6 +108,22 @@ describe("Server", function() {
       });
     });
 
+    it("should destroy the room after a given timeout", function(done) {
+      var params = JSON.stringify({room: "foo", ttl: 30});
+      var reqOptions = {url: '/rooms', body: params};
+
+      req.post(reqOptions, function (error, response, body) {
+        expect(error).to.equal(null);
+        expect(response.statusCode).to.equal(200);
+
+        expect(server.rooms["foo"]).to.not.equal(undefined);
+        clock.tick(31000);
+        expect(server.rooms["foo"]).to.equal(undefined);
+
+        done();
+      });
+    });
+
     it("should return an error if the content type is not JSON",
       function(done) {
         req.post({
@@ -123,7 +141,7 @@ describe("Server", function() {
     it("should return a conflict error if the room exists", function(done) {
       var params = JSON.stringify({room: "foo"});
       var reqOptions = {url: '/rooms', body: params};
-      server.rooms["foo"] = {};
+      server.rooms["foo"] = {users: {}, ttl: 60000};
 
       req.post(reqOptions, function (error, response, body) {
         expect(response.statusCode).to.equal(409);
@@ -136,7 +154,7 @@ describe("Server", function() {
   describe("#eventStream", function() {
 
     beforeEach(function() {
-      server.rooms["foo"] = {};
+      server.rooms["foo"] = {users: {}, ttl: 60000};
     });
 
     it("should receive an uid-token pair as the first event",
@@ -162,7 +180,7 @@ describe("Server", function() {
 
       source.addEventListener("uid", function(event) {
         var message = JSON.parse(event.data);
-        var conn = server.rooms["foo"][message.uid];
+        var conn = server.rooms["foo"].users[message.uid];
         expect(conn).to.be.an.instanceOf(http.ServerResponse);
 
         source.close();
@@ -222,12 +240,12 @@ describe("Server", function() {
         var request = req.get('/rooms/foo');
 
         request.on("response", function(response) {
-          var conn = server.rooms["foo"][uid];
+          var conn = server.rooms["foo"].users[uid];
           expect(conn).to.be.an.instanceOf(http.ServerResponse);
           response.socket.end();
         });
         request.on("end", function() {
-          var conn = server.rooms["foo"][uid];
+          var conn = server.rooms["foo"].users[uid];
           expect(conn === undefined).to.equal(true);
           done();
         });
@@ -281,7 +299,7 @@ describe("Server", function() {
   describe("#forwardEvent", function() {
 
     beforeEach(function() {
-      server.rooms["foo"] = {};
+      server.rooms["foo"] = {users: {}, ttl: 60000};
     });
 
     it("should forward the posted event to all connected users",
