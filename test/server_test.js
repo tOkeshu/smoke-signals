@@ -10,7 +10,9 @@ var sinon = require("sinon");
 var request = require('request');
 var EventSource = require('eventsource');
 
+var utils = require('../server/utils');
 var SmokeServer = require("../server");
+var Rooms = require('../server/rooms');
 var pjson = require('../package.json');
 
 var host = "http://localhost:7665";
@@ -48,7 +50,7 @@ describe("Server", function() {
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
     clock = sinon.useFakeTimers();
-    server.rooms = {};
+    server.rooms = new Rooms();
   });
 
   afterEach(function() {
@@ -80,7 +82,7 @@ describe("Server", function() {
 
   describe("#createRoom", function() {
     it("should create a new room", function(done) {
-      sandbox.stub(server, "_generateID").returns("fake room");
+      sandbox.stub(utils, "generateID").returns("fake room");
 
       req.post('/rooms', function (error, response, body) {
         expect(error).to.equal(null);
@@ -116,9 +118,9 @@ describe("Server", function() {
         expect(error).to.equal(null);
         expect(response.statusCode).to.equal(200);
 
-        expect(server.rooms["foo"]).to.not.equal(undefined);
+        expect(server.rooms.get("foo")).to.not.equal(undefined);
         clock.tick(31000);
-        expect(server.rooms["foo"]).to.equal(undefined);
+        expect(server.rooms.get("foo")).to.equal(undefined);
 
         done();
       });
@@ -141,7 +143,7 @@ describe("Server", function() {
     it("should return a conflict error if the room exists", function(done) {
       var params = JSON.stringify({room: "foo"});
       var reqOptions = {url: '/rooms', body: params};
-      server.rooms["foo"] = {users: {}, ttl: 60000};
+      server.rooms.create("foo", 60000);
 
       req.post(reqOptions, function (error, response, body) {
         expect(response.statusCode).to.equal(409);
@@ -154,12 +156,12 @@ describe("Server", function() {
   describe("#eventStream", function() {
 
     beforeEach(function() {
-      server.rooms["foo"] = {users: {}, ttl: 60000};
+      server.rooms.create("foo", 60000);
     });
 
     it("should receive an uid-token pair as the first event",
       function(done) {
-        var id = sandbox.stub(server, "_generateID");
+        var id = sandbox.stub(utils, "generateID");
         id.onCall(0).returns("fake uid");
         id.onCall(1).returns("fake token");
         var source = new EventSource(host + "/rooms/foo");
@@ -180,8 +182,8 @@ describe("Server", function() {
 
       source.addEventListener("uid", function(event) {
         var message = JSON.parse(event.data);
-        var conn = server.rooms["foo"].users[message.uid];
-        expect(conn).to.be.an.instanceOf(http.ServerResponse);
+        var user = server.rooms.get("foo").users.getByUid(message.uid);
+        expect(user).to.not.equal(undefined);
 
         source.close();
         done();
@@ -190,7 +192,7 @@ describe("Server", function() {
 
     it("should notify everyone in the room a new user is here",
       function(done) {
-        var id = sandbox.stub(server, "_generateID");
+        var id = sandbox.stub(utils, "generateID");
         id.onCall(0).returns("user 1");
         id.onCall(1).returns("token 1");
         id.onCall(2).returns("user 2");
@@ -208,12 +210,12 @@ describe("Server", function() {
             return;
 
           nbCalls = 0;
-          user1.addEventListener("newbuddy", newbuddy);
-          user2.addEventListener("newbuddy", newbuddy);
+          user1.addEventListener("newbuddy", newbuddy.bind(null, "user1"));
+          user2.addEventListener("newbuddy", newbuddy.bind(null, "user2"));
           user3 = new EventSource(host + "/rooms/foo");
         }
 
-        function newbuddy(event) {
+        function newbuddy(u, event) {
           var message = JSON.parse(event.data);
           nbCalls += 1;
 
@@ -234,26 +236,26 @@ describe("Server", function() {
     it("should remove the user from the room if he disconnects",
       function(done) {
         var uid = "fake uid"
-        var id = sandbox.stub(server, "_generateID");
+        var id = sandbox.stub(utils, "generateID");
         id.onCall(0).returns(uid);
         id.onCall(1).returns("fake token");
         var request = req.get('/rooms/foo');
 
         request.on("response", function(response) {
-          var conn = server.rooms["foo"].users[uid];
-          expect(conn).to.be.an.instanceOf(http.ServerResponse);
+          var user = server.rooms.get("foo").users.getByUid(uid);
+          expect(user).to.not.equal(undefined);
           response.socket.end();
         });
         request.on("end", function() {
-          var conn = server.rooms["foo"].users[uid];
-          expect(conn === undefined).to.equal(true);
+          var user = server.rooms.get("foo").users.getByUid(uid);
+          expect(user).to.equal(undefined);
           done();
         });
       });
 
     it("should notify everyone that someone disconnected",
       function(done) {
-        var id = sandbox.stub(server, "_generateID");
+        var id = sandbox.stub(utils, "generateID");
         id.onCall(0).returns("user 1");
         id.onCall(1).returns("token 1");
         id.onCall(2).returns("user 2");
@@ -299,12 +301,12 @@ describe("Server", function() {
   describe("#forwardEvent", function() {
 
     beforeEach(function() {
-      server.rooms["foo"] = {users: {}, ttl: 60000};
+      server.rooms.create("foo", 60000);
     });
 
     it("should forward the posted event to all connected users",
       function(done) {
-        var uid = sandbox.stub(server, "_generateID");
+        var uid = sandbox.stub(utils, "generateID");
         uid.onCall(0).returns("user 1");
         uid.onCall(1).returns("token 1");
         uid.onCall(2).returns("user 2");
