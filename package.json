@@ -18,6 +18,7 @@
     "eventsource": "0.1.x",
     "jshint": "2.5.x"
   },
+  "main": "server/index.js",
   "scripts": {
     "start": "./bin/smoke",
     "test": "./node_modules/.bin/jshint server/*.js && ./node_modules/.bin/mocha test"
