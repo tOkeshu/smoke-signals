@@ -38,6 +38,11 @@ Users.prototype = {
     return user;
   },
 
+  add: function(user) {
+    this.users[user.uid] = user;
+    this.tokens[user.token] = user;
+  },
+
   remove: function(user) {
     delete this.users[user.uid];
     delete this.tokens[user.uid];
