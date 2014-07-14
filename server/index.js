@@ -19,7 +19,7 @@ function requireJSON(req, res, next) {
     return;
   }
 
-  if (req.get("Content-Type") !== "application/json") {
+  if (req.get("Content-Type").indexOf("application/json") === -1) {
     res.json(400, ['application/json']);
     return;
   }
