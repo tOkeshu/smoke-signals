@@ -29,17 +29,21 @@ function requireJSON(req, res, next) {
 
 
 function SmokeServer(config) {
-  this.config = config;
+  this.config = config || {};
+  this.config.root = this.config.root || "";
+
   this.rooms = new Rooms();
 
   this.app = express();
   this.app.use(bodyParser.json());
   this.app.use(requireJSON);
   this.app.use(serverSentEvents);
-  this.app.get("/",             this.hello.bind(this));
-  this.app.post("/rooms",       this.createRoom.bind(this));
-  this.app.get("/rooms/:room",  this.eventStream.bind(this));
-  this.app.post("/rooms/:room", this.forwardEvent.bind(this));
+
+  var root = this.config.root;
+  this.app.get(root  + "/",            this.hello.bind(this));
+  this.app.post(root + "/rooms",       this.createRoom.bind(this));
+  this.app.get(root  + "/rooms/:room", this.eventStream.bind(this));
+  this.app.post(root + "/rooms/:room", this.forwardEvent.bind(this));
 
   this.server = http.createServer(this.app);
 }
