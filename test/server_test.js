@@ -10,9 +10,10 @@ var sinon = require("sinon");
 var request = require('request');
 var EventSource = require('eventsource');
 
-var utils = require('../server/utils');
-var SmokeServer = require("../server");
-var Rooms = require('../server/rooms');
+var SmokeServer = require("../server").SmokeServer;
+var Users       = require("../server").Users;
+var Rooms       = require("../server").Rooms;
+var utils       = require("../server").utils;
 var pjson = require('../package.json');
 
 var host = "http://localhost:7665";

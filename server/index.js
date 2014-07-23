@@ -10,6 +10,7 @@ var bodyParser = require('body-parser');
 
 var pjson = require('../package.json');
 var serverSentEvents = require('./sse');
+var Users = require('./users');
 var Rooms = require('./rooms');
 var utils = require('./utils');
 
@@ -166,5 +167,10 @@ SmokeServer.prototype = {
   },
 };
 
-module.exports = SmokeServer;
+module.exports = {
+  SmokeServer: SmokeServer,
+  Users: Users,
+  Rooms: Rooms,
+  utils: utils
+};
 
