@@ -5,6 +5,7 @@
 
 var EventEmitter = require("events").EventEmitter;
 var inherits = require("util").inherits;
+var extend = require("util")._extend;
 var utils = require("./utils");
 
 function User(uid, token, connection) {
@@ -24,9 +25,13 @@ inherits(User, EventEmitter);
 function Users() {
   this.users  = {};
   this.tokens = {};
+
+  EventEmitter.call(this);
 }
 
-Users.prototype = {
+inherits(Users, EventEmitter);
+
+Users.prototype = extend(Users.prototype, {
   create: function(connection) {
     var uid            = utils.generateID();
     var token          = utils.generateID();
@@ -41,6 +46,7 @@ Users.prototype = {
   add: function(user) {
     this.users[user.uid] = user;
     this.tokens[user.token] = user;
+    this.emit("add", user);
   },
 
   remove: function(user) {
@@ -64,7 +70,7 @@ Users.prototype = {
   size: function() {
     return Object.keys(this.users).length;
   }
-};
+});
 
 module.exports = Users;
 
