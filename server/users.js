@@ -49,6 +49,10 @@ Users.prototype = extend(Users.prototype, {
     this.emit("add", user);
   },
 
+  get: function(uid) {
+    return this.users[uid];
+  },
+
   remove: function(user) {
     delete this.users[user.uid];
     delete this.tokens[user.uid];
