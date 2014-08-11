@@ -45,7 +45,7 @@ describe("Server", function() {
 
   before(function(done) {
     server = new SmokeServer();
-    server.run(done);
+    server.run(7665, done);
   });
 
   beforeEach(function() {

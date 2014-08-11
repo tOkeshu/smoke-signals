@@ -119,7 +119,7 @@ SmokeServer.prototype = {
 
       if (room.empty())
         room.timeoutAfter(room.ttl);
-    });
+    }.bind(this));
 
     room.users.forEach(function(user) {
       if (user === peer)
@@ -158,8 +158,8 @@ SmokeServer.prototype = {
     res.send(200, "ok");
   },
 
-  run: function(callback) {
-    this.server.listen(7665, callback);
+  run: function(port, callback) {
+    this.server.listen(port, callback);
   },
 
   stop: function(callback) {
