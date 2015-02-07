@@ -202,36 +202,25 @@ describe("Server", function() {
         id.onCall(5).returns("token 3");
         var user1 = new EventSource(host + "/rooms/foo");
         var user2 = new EventSource(host + "/rooms/foo");
-        var user3, nbCalls = 0, id;
+        var user3;
 
-        function uid(event) {
-          nbCalls += 1;
-
-          if (nbCalls < 2)
-            return;
-
-          nbCalls = 0;
-          user1.addEventListener("newbuddy", newbuddy.bind(null, "user1"));
-          user2.addEventListener("newbuddy", newbuddy.bind(null, "user2"));
+        function expectUser2(event) {
+          var message = JSON.parse(event.data);
+          expect(message.peer).to.equal("user 2");
           user3 = new EventSource(host + "/rooms/foo");
         }
 
-        function newbuddy(u, event) {
+        function expectUser3(event) {
           var message = JSON.parse(event.data);
-          nbCalls += 1;
-
           expect(message.peer).to.equal("user 3");
+          user1.close();
+          user2.close();
+          user3.close();
+          done();
+        }
 
-          if (nbCalls === 2) {
-            user1.close();
-            user2.close();
-            user3.close();
-            done();
-          }
-        };
-
-        user1.addEventListener("uid", uid);
-        user2.addEventListener("uid", uid);
+        user1.once("newbuddy", expectUser2);
+        user2.once("newbuddy", expectUser3);
       });
 
     it("should remove the user from the room if he disconnects",
