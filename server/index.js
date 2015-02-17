@@ -8,11 +8,12 @@ var http = require('http');
 var express = require('express');
 var bodyParser = require('body-parser');
 
-var pjson = require('../package.json');
+var config = require('./config');
+var pjson  = require('../package.json');
 var serverSentEvents = require('./sse');
-var Users = require('./users');
-var Rooms = require('./rooms');
-var utils = require('./utils');
+var Users  = require('./users');
+var Rooms  = require('./rooms');
+var utils  = require('./utils');
 
 function requireJSON(req, res, next) {
   if (req.method !== "POST") {
@@ -29,9 +30,9 @@ function requireJSON(req, res, next) {
 }
 
 
-function SmokeServer(config) {
-  this.config = config || {};
-  this.config.root = this.config.root || "";
+function SmokeServer(options) {
+  this.options = options || {};
+  this.config  = config;
 
   this.rooms = new Rooms();
 
@@ -40,7 +41,7 @@ function SmokeServer(config) {
   this.app.use(requireJSON);
   this.app.use(serverSentEvents);
 
-  var root = this.config.root;
+  var root = this.options.root || "";
   this.app.get(root  + "/",            this.hello.bind(this));
   this.app.post(root + "/rooms",       this.createRoom.bind(this));
   this.app.get(root  + "/rooms/:room", this.eventStream.bind(this));
@@ -158,8 +159,10 @@ SmokeServer.prototype = {
     res.send(200, "ok");
   },
 
-  run: function(port, callback) {
-    this.server.listen(port, callback);
+  run: function(callback) {
+    var port = this.config.get('port');
+    var ip = this.config.get('ip');
+    this.server.listen(port, ip, 511, callback);
   },
 
   stop: function(callback) {
